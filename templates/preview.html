@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>收据预览 - {{ receipt.payer }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #e9ecef;
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        .toolbar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        .page-navigation {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        .receipt-paper {
+            background: white;
+            /* A5 横向尺寸 */
+            width: 210mm;
+            min-height: 148mm;
+            margin: 24px auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+            position: relative;
+            /* 调整边距以适应A5 */
+            padding: 10mm 15mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .receipt-content {
+            width: 100%;
+            /* 调整内容最大宽度 */
+            max-width: 180mm;
+        }
+        .receipt-title {
+            text-align: center;
+            font-size: 1.6em;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            margin-bottom: 8mm;
+            white-space: nowrap;
+        }
+        .receipt-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6mm;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 3mm;
+            font-size: 1em;
+        }
+        .receipt-header > div {
+            flex: 1;
+            text-align: center;
+        }
+        .receipt-header > div:first-child {
+            text-align: left;
+        }
+        .receipt-header > div:last-child {
+            text-align: right;
+        }
+        .page-info {
+            text-align: center;
+            margin-bottom: 4mm;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .receipt-table {
+            width: 100%;
+            margin-bottom: 6mm;
+            border-collapse: collapse;
+            font-size: 0.98em;
+        }
+        .receipt-table th, .receipt-table td {
+            border: 1px solid #bdbdbd;
+            padding: 5px 6px;
+            text-align: center;
+        }
+        .receipt-table th {
+            background-color: #f8f9fa;
+            font-weight: 500;
+        }
+        .receipt-table .text-start { text-align: left !important; }
+        .receipt-footer {
+            margin-top: auto;
+            padding-top: 6mm;
+            border-top: 1px solid #dee2e6;
+            font-size: 0.95em;
+            color: #6c757d;
+            display: flex;
+            justify-content: space-between;
+        }
+        .receipt-footer > div {
+            flex: 1;
+            text-align: center;
+        }
+        .receipt-footer > div:first-child {
+            text-align: left;
+        }
+        .receipt-footer > div:last-child {
+            text-align: right;
+        }
+        .stamp {
+            position: absolute;
+            right: 20mm;
+            bottom: 15mm;
+            width: 30mm;
+            height: 30mm;
+            opacity: 0.8;
+        }
+        
+        /* 打印样式 */
+        @media print {
+            @page {
+                /* A5 横向尺寸 */
+                size: A5 landscape;
+                margin: 0;
+            }
+            
+            body { 
+                background: white; 
+                margin: 0;
+                padding: 0;
+            }
+            
+            .toolbar, .page-navigation { 
+                display: none; 
+            }
+            
+            .receipt-paper {
+                margin: 0;
+                box-shadow: none;
+                /* A5 横向尺寸 */
+                width: 210mm;
+                height: 148mm;
+                /* 调整打印边距 */
+                padding: 10mm 15mm;
+                page-break-after: always;
+                page-break-inside: avoid;
+                align-items: center;
+            }
+            
+            .receipt-content {
+                width: 100%;
+                /* 调整内容最大宽度 */
+                max-width: 180mm;
+            }
+            
+            .receipt-title {
+                font-size: 1.4em;
+                margin-bottom: 6mm;
+            }
+            
+            .receipt-header {
+                margin-bottom: 4mm;
+                padding-bottom: 2mm;
+                font-size: 0.9em;
+            }
+            
+            .receipt-table {
+                margin-bottom: 4mm;
+                font-size: 0.9em;
+            }
+            
+            .receipt-table th, .receipt-table td {
+                padding: 3px 4px;
+            }
+            
+            .receipt-footer {
+                padding-top: 4mm;
+                font-size: 0.85em;
+            }
+            
+            .page-info {
+                margin-bottom: 2mm;
+                font-size: 0.8em;
+            }
+            
+            .stamp {
+                right: 20mm;
+                bottom: 15mm;
+                width: 30mm;
+                height: 30mm;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="toolbar no-print">
+    <a href="/" class="btn btn-secondary">返回</a>
+    <button class="btn btn-primary" onclick="printAllPages()">打印全部</button>
+</div>
+
+{% if total_pages > 1 %}
+<div class="page-navigation no-print">
+    <div class="mb-2">
+        <strong>共{{ total_pages }}页/第{{ current_page }}页</strong>
+    </div>
+    <div class="btn-group-vertical">
+        {% if current_page > 1 %}
+        <a href="?page={{ current_page - 1 }}" class="btn btn-sm btn-outline-primary">上一页</a>
+        {% endif %}
+        {% if current_page < total_pages %}
+        <a href="?page={{ current_page + 1 }}" class="btn btn-sm btn-outline-primary">下一页</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 当前页收据 -->
+<div class="receipt-paper">
+    <div class="receipt-content">
+        <div class="receipt-title">阿坝州云硕信息技术有限公司电子收据</div>
+        <div class="receipt-header">
+            <div><strong>单位:</strong> {{ receipt.payer }}</div>
+            <div><strong>日期:</strong> {{ receipt.date }}</div>
+            <div><strong>No:</strong> {{ '%06d' | format(receipt.id) }}</div>
+        </div>
+        
+        {% if total_pages > 1 %}
+        <div class="page-info">
+            共{{ total_pages }}页/第{{ current_page }}页 (共{{ total_items }}项)
+        </div>
+        {% endif %}
+        
+        <table class="receipt-table">
+            <thead>
+                <tr>
+                    <th style="width:8%">序号</th>
+                    <th class="text-start" style="width:32%">项目名称</th>
+                    <th style="width:10%">单位</th>
+                    <th style="width:10%">数量</th>
+                    <th style="width:16%">单价</th>
+                    <th style="width:16%">金额</th>
+                    <th class="text-start">备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in current_items %}
+                <tr>
+                    <td>{{ item.display_index }}</td>
+                    <td class="text-start">{{ item['name'] }}</td>
+                    <td>{{ item['unit'] }}</td>
+                    <td>{{ item['qty'] }}</td>
+                    <td>{{ '%.2f' | format(item['price'] | float) }}</td>
+                    <td>{{ '%.2f' | format(item['amount'] | float) }}</td>
+                    <td class="text-start">{{ item['remark'] }}</td>
+                </tr>
+                {% endfor %}
+                {% for i in range(5 - current_items | length) %}
+                <tr>
+                    <td>&nbsp;</td><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th class="text-start" colspan="5">合计人民币（大写）</th>
+                    <th>{{ '%.2f' | format(receipt.amount | float) }}</th>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="text-start" style="border: none; padding-top: 8px;">
+                        <strong>金额大写：</strong>{{ receipt.amount | to_chinese_upper }}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="receipt-footer">
+            <div>收款单位: {{ receipt.payee }}</div>
+            <div>会计: {{ receipt.accountant }}</div>
+            <div>收款人: {{ receipt.recipient }}</div>
+        </div>
+    </div>
+    
+    <img src="{{ url_for('static', filename='lo.png') }}" class="stamp" alt="盖章">
+</div>
+
+<!-- 隐藏的其他页面（用于打印） -->
+{% if total_pages > 1 %}
+    {% for page_num in range(1, total_pages + 1) %}
+        {% if page_num != current_page %}
+        <div class="receipt-paper" style="display: none;" id="page-{{ page_num }}">
+            <div class="receipt-content">
+                <div class="receipt-title">阿坝州云硕信息有限公司专用收据</div>
+                <div class="receipt-header">
+                    <div><strong>单位:</strong> {{ receipt.payer }}</div>
+                    <div><strong>日期:</strong> {{ receipt.date }}</div>
+                    <div><strong>No:</strong> {{ '%06d' | format(receipt.id) }}</div>
+                </div>
+                
+                <div class="page-info">
+                    共{{ total_pages }}页/第{{ page_num }}页 (共{{ total_items }}项)
+                </div>
+                
+                <table class="receipt-table">
+                    <thead>
+                        <tr>
+                            <th style="width:8%">序号</th>
+                            <th class="text-start" style="width:32%">项目名称</th>
+                            <th style="width:10%">单位</th>
+                            <th style="width:10%">数量</th>
+                            <th style="width:16%">单价</th>
+                            <th style="width:16%">金额</th>
+                            <th class="text-start">备注</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set start_idx = (page_num - 1) * 5 %}
+                        {% set end_idx = [start_idx + 5, total_items] | min %}
+                        {% for i in range(start_idx, end_idx) %}
+                        <tr>
+                            <td>{{ i + 1 }}</td>
+                            <td class="text-start">{{ receipt['items'][i]['name'] }}</td>
+                            <td>{{ receipt['items'][i]['unit'] }}</td>
+                            <td>{{ receipt['items'][i]['qty'] }}</td>
+                            <td>{{ '%.2f' | format(receipt['items'][i]['price'] | float) }}</td>
+                            <td>{{ '%.2f' | format(receipt['items'][i]['amount'] | float) }}</td>
+                            <td class="text-start">{{ receipt['items'][i]['remark'] }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% for i in range(5 - (end_idx - start_idx)) %}
+                        <tr>
+                            <td>&nbsp;</td><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th class="text-start" colspan="5">合计人民币（大写）</th>
+                            <th>{{ '%.2f' | format(receipt.amount | float) }}</th>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="7" class="text-start" style="border: none; padding-top: 8px;">
+                                <strong>金额大写：</strong>{{ receipt.amount | to_chinese_upper }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div class="receipt-footer">
+                    <div>收款单位: {{ receipt.payee }}</div>
+                    <div>会计: {{ receipt.accountant }}</div>
+                    <div>收款人: {{ receipt.recipient }}</div>
+                </div>
+            </div>
+            
+            <img src="{{ url_for('static', filename='lo.png') }}" class="stamp" alt="盖章">
+        </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<script>
+function printAllPages() {
+    // 显示所有页面
+    const pages = document.querySelectorAll('.receipt-paper');
+    pages.forEach(page => {
+        page.style.display = 'flex';
+    });
+    
+    // 打印
+    window.print();
+    
+    // 打印后恢复显示状态
+    setTimeout(() => {
+        pages.forEach((page, index) => {
+            if (index > 0) {
+                page.style.display = 'none';
+            }
+        });
+    }, 1000);
+}
+</script>
+</body>
+</html>
+{% macro to_chinese_upper(amount) %}
+{# 仅用于模板渲染，实际应在后端实现大写金额转换 #}
+{{ amount }}
+{% endmacro %} 

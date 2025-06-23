@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>收据历史记录</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <h2>收据历史记录</h2>
+    <a href="/" class="btn btn-primary mb-3">新建收据</a>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 5%;">ID</th>
+                <th style="width: 15%;">付款单位</th>
+                <th style="width: 10%;">金额</th>
+                <th style="width: 10%;">日期</th>
+                <th style="width: 25%;">项目摘要</th>
+                <th style="width: 15%;">生成时间</th>
+                <th style="width: 20%;">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in receipts %}
+            <tr>
+                <td>{{ r.id }}</td>
+                <td>{{ r.payer }}</td>
+                <td>¥{{ '%.2f' | format(r.amount | float) }}</td>
+                <td>{{ r.date }}</td>
+                <td>
+                    {% if r.get('items') %}
+                    <ul class="list-unstyled mb-0 small">
+                        {% for item in r.get('items')[:2] %}
+                            <li>{{ item.name }}</li>
+                        {% endfor %}
+                        {% if r.get('items')|length > 2 %}
+                            <li>...等 {{ r.get('items')|length }} 项</li>
+                        {% endif %}
+                    </ul>
+                    {% endif %}
+                </td>
+                <td>{{ r.created_at }}</td>
+                <td>
+                    <a href="{{ url_for('preview', receipt_id=r.id) }}" class="btn btn-sm btn-info">预览</a>
+                    <form action="{{ url_for('delete_receipt', receipt_id=r.id) }}" method="POST" class="d-inline" onsubmit="return confirm('确定要永久删除这条收据吗？\nID: {{ r.id }}\n付款单位: {{ r.payer }}\n金额: {{ r.amount }}');">
+                        <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="7" class="text-center">没有历史记录</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
